@@ -8,7 +8,7 @@ from aiogram.types import Message, FSInputFile, InlineKeyboardButton, CallbackQu
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-TOKEN = "PUT HERE TOKEN TO BOT"
+TOKEN = "PUT BOT TOKEN HERE"
 DOWNLOAD_DIR = "downloads"
 
 if not os.path.exists(DOWNLOAD_DIR):
@@ -88,18 +88,39 @@ async def process_link(message: Message):
     )
     await message.answer("Оберіть дію:", reply_markup=builder.as_markup())
 
+
 @dp.callback_query(F.data.startswith("info|"))
 async def show_info(callback: CallbackQuery):
     url = callback.data.split("|")[1]
-    await callback.answer()
-    info = get_video_info(url)
+    await callback.answer("Збираю метадані...")
+    
+    with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+        info = ydl.extract_info(url, download=False)
+    
     duration = time.strftime('%H:%M:%S', time.gmtime(info.get('duration', 0)))
-    await callback.message.answer(
-        f"📝 **Назва:** {info.get('title')}\n"
+    thumbnail_url = info.get('thumbnail')  # Отримуємо посилання на обкладинку
+    
+    # Формуємо розширений звіт
+    report = (
+        f"🖼 **Назва:** {info.get('title')}\n"
+        f"👤 **Автор:** {info.get('uploader')}\n"
         f"⏱ **Тривалість:** {duration}\n"
-        f"📂 **Файл буде названо:** `{remove_invalid_characters(info.get('title'))}`",
-        parse_mode="Markdown"
+        f"👁 **Перегляди:** {info.get('view_count', 0):,}\n"
+        f"📅 **Дата:** {info.get('upload_date')}\n"
+        f"📏 **Роздільна здатність:** {info.get('width')}x{info.get('height')}\n"
+        f"🔗 [Відкрити обкладинку в повній якості]({thumbnail_url})"
     )
+    
+    if thumbnail_url:
+        # Надсилаємо фото з описом
+        await callback.message.answer_photo(
+            photo=thumbnail_url,
+            caption=report,
+            parse_mode="Markdown"
+        )
+    else:
+        # Якщо раптом обкладинки немає, шлемо просто текст
+        await callback.message.answer(report, parse_mode="Markdown")
 
 @dp.callback_query(F.data.startswith("audio|") | F.data.startswith("video|"))
 async def handle_download(callback: CallbackQuery):
