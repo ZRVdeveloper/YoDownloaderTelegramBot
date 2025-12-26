@@ -1,4 +1,5 @@
 import asyncio
+import token_to_bot
 import os
 import time
 import re
@@ -8,7 +9,7 @@ from aiogram.types import Message, FSInputFile, InlineKeyboardButton, CallbackQu
 from aiogram.filters import Command
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-TOKEN = "PUT BOT TOKEN HERE"
+TOKEN = token_to_bot.TOKEN
 DOWNLOAD_DIR = "downloads"
 
 if not os.path.exists(DOWNLOAD_DIR):
